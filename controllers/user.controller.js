@@ -5,6 +5,7 @@ import verifyEmailTemplate from "../utils/verifyEmailTemplate.js";
 import { Router } from "express";
 import generatedAccessToken from "../utils/generatedAccessToken.js";
 import genertedRefreshToken from "../utils/generatedRefreshToken.js";
+import auth from "../middleware/auth.js";
 
 export class UserController{
     
@@ -17,6 +18,7 @@ export class UserController{
         this.router.post("/register",this.registerUser);
         this.router.post("/verify-email",this.verifyUser);
         this.router.post("/login",this.loginUser);
+        this.router.post("/logout",auth,this.logoutUser)
     }
     registerUser =async(req,res)=>{
         try{
@@ -95,7 +97,7 @@ export class UserController{
             if(User.status!=="Active"){
                 return res.status(401).json({message:"This account is not active. Please activate the account"});
             }
-            
+
             const checkPassword=await bcrypt.compare(password,User.password);
             if(!checkPassword){
                 return res.status(402).json({message:"Wrong Password entered"});
@@ -126,6 +128,35 @@ export class UserController{
         }
         catch(error){
             return res.status(500).json({message:`Cannot Login User ${error.message}`,error:true,success:false});
+        }
+    }
+
+    logoutUser=async(req,res)=>{
+        try{
+            const userid = req.userId //middleware
+
+            const cookiesOption = {
+                httpOnly : true,
+                secure : true,
+                sameSite : "None"
+            }
+
+            res.clearCookie("accessToken",cookiesOption)
+            res.clearCookie("refreshToken",cookiesOption)
+
+            const removeRefreshToken = await UserModel.findByIdAndUpdate(userid,{
+                refresh_token : ""
+            })
+
+            return res.status(202).json({
+                message : "Logout successfully",
+            })
+        }
+        catch(error){
+            res.status(501).json({
+                message:`Failed to Logout: ${error.message}`,
+                error:true
+            })
         }
     }
 
