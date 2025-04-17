@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser'
 import morgan from 'morgan'
 import helmet from 'helmet'
 import connectDB from './config/connectDB.js'
+import { UserController } from './controllers/user.controller.js'
 
 dotenv.config()
 
@@ -30,6 +31,8 @@ app.get("/",(request,response)=>{
         message: "Server is  hello"
     })
 })
+
+app.use('/api/user',new UserController().router);
 
 connectDB().then(()=>{
     app.listen(PORT,()=>{
