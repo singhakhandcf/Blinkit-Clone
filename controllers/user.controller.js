@@ -21,12 +21,12 @@ export class UserController {
         this.router.post("/verify-email", this.verifyUser);
         this.router.post("/login", this.loginUser);
         this.router.post("/logout", auth, this.logoutUser);
-        this.router.put("upload-avatar",auth,this.uploadAvatar);
-        this.router.put("updateUser",auth,this.updateUserDetails);
-        this.router.put("forgotPassword",this.forgotPassword);
-        this.router.put("verify-otp",this.verifyOtp);
-        this.router.put("reset=password",this.resetPassword);
-        this.router.post("refresh-Token",this.refereshToken);
+        this.router.put("/upload-avatar",auth,this.uploadAvatar);
+        this.router.put("/updateUser",auth,this.updateUserDetails);
+        this.router.put("/forgotPassword",this.forgotPassword);
+        this.router.put("/verify-otp",this.verifyOtp);
+        this.router.put("/reset-password",this.resetPassword);
+        this.router.post("/refresh-Token",this.refereshToken);
     }
     registerUser = async (req, res) => {
         try {
@@ -232,12 +232,12 @@ export class UserController {
             }
 
             const otp=generateOtp();
-            this.sendOtp(otp);
+            this.sendOtp(email,otp);
             const expiryTime=new Date() +60*60*1000;
 
             const updateUser= await UserModel.findByIdAndUpdate(User._id,{
                 forgot_password_otp:otp,
-                forgot_password_expiry:newDate(expiryTime).toISOString()
+                forgot_password_expiry:new Date(expiryTime).toISOString()
             })
 
             res.status(201).json({
@@ -252,7 +252,7 @@ export class UserController {
         }
     }
 
-    sendOtp = async(otp)=>{
+    sendOtp = async(email,otp)=>{
             
             await sendEmail({
                 sendTo: email,
@@ -279,7 +279,7 @@ export class UserController {
 
             const curTime=new Date().toISOString();
 
-            if(curTime>expiryTime){
+            if(curTime>User.forgot_password_expiry){
                 return res.status(501).json({
                     message:"OTP expired"
                 })
@@ -327,7 +327,7 @@ export class UserController {
             }
 
             const salt = await bcrypt.genSalt(10);
-            const hashPassword = await bcrypt.hash(password, salt);
+            const hashPassword = await bcrypt.hash(newPassword, salt);
 
             const updateUser= await UserModel.findByIdAndUpdate(User._id,{
                 password:hashPassword
