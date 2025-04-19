@@ -8,6 +8,7 @@ import genertedRefreshToken from "../utils/generatedRefreshToken.js";
 import auth from "../middleware/auth.js";
 import generateOtp from "../utils/generateOtp.js";
 import verifyOtpTemplate from "../utils/verifyOtpTemplate.js";
+import uploadImageCloudinary from "../utils/uploadImageCloudinary.js";
 
 export class UserController {
 
@@ -21,12 +22,12 @@ export class UserController {
         this.router.post("/verify-email", this.verifyUser);
         this.router.post("/login", this.loginUser);
         this.router.post("/logout", auth, this.logoutUser);
-        this.router.put("/upload-avatar",auth,this.uploadAvatar);
-        this.router.put("/updateUser",auth,this.updateUserDetails);
-        this.router.put("/forgotPassword",this.forgotPassword);
-        this.router.put("/verify-otp",this.verifyOtp);
-        this.router.put("/reset-password",this.resetPassword);
-        this.router.post("/refresh-Token",this.refereshToken);
+        this.router.put("/upload-avatar", auth, this.uploadAvatar);
+        this.router.put("/updateUser", auth, this.updateUserDetails);
+        this.router.put("/forgotPassword", this.forgotPassword);
+        this.router.put("/verify-otp", this.verifyOtp);
+        this.router.put("/reset-password", this.resetPassword);
+        this.router.post("/refresh-Token", this.refereshToken);
     }
     registerUser = async (req, res) => {
         try {
@@ -170,7 +171,24 @@ export class UserController {
 
     uploadAvatar = async (req, res) => {
         try {
+            const userId = req.userId // auth middlware
+            const image = reqfile  // multer middleware
 
+            const upload = await uploadImageCloudinary(image)
+
+            const updateUser = await UserModel.findByIdAndUpdate(userId, {
+                avatar: upload.url
+            })
+
+            return res.json({
+                message: "upload profile",
+                success: true,
+                error: false,
+                data: {
+                    _id: userId,
+                    avatar: upload.url
+                }
+            })
         }
         catch (error) {
             res.status(501).json({
@@ -231,18 +249,18 @@ export class UserController {
                 })
             }
 
-            const otp=generateOtp();
-            this.sendOtp(email,otp);
-            const expiryTime=new Date() +60*60*1000;
+            const otp = generateOtp();
+            this.sendOtp(email, otp);
+            const expiryTime = new Date() + 60 * 60 * 1000;
 
-            const updateUser= await UserModel.findByIdAndUpdate(User._id,{
-                forgot_password_otp:otp,
-                forgot_password_expiry:new Date(expiryTime).toISOString()
+            const updateUser = await UserModel.findByIdAndUpdate(User._id, {
+                forgot_password_otp: otp,
+                forgot_password_expiry: new Date(expiryTime).toISOString()
             })
 
             res.status(201).json({
-                success:true,
-                message:"OTP sent successfully !"
+                success: true,
+                message: "OTP sent successfully !"
             })
         }
         catch (error) {
@@ -252,149 +270,149 @@ export class UserController {
         }
     }
 
-    sendOtp = async(email,otp)=>{
-            
-            await sendEmail({
-                sendTo: email,
-                subject: "Verify OTP",
-                html: verifyOtpTemplate({
-                    otp
-                })
+    sendOtp = async (email, otp) => {
+
+        await sendEmail({
+            sendTo: email,
+            subject: "Verify OTP",
+            html: verifyOtpTemplate({
+                otp
             })
-        
-        
+        })
+
+
     }
 
-    verifyOtp=async(req,res)=>{
-        try{
-            const {email,otp}=req.body;
+    verifyOtp = async (req, res) => {
+        try {
+            const { email, otp } = req.body;
 
-            if(!email||!otp){
+            if (!email || !otp) {
                 return res.status(400).json({
-                    message:"Please enter otp"
+                    message: "Please enter otp"
                 })
             }
 
-            const User=await UserModel.findOne({email});
+            const User = await UserModel.findOne({ email });
 
-            const curTime=new Date().toISOString();
+            const curTime = new Date().toISOString();
 
-            if(curTime>User.forgot_password_expiry){
+            if (curTime > User.forgot_password_expiry) {
                 return res.status(501).json({
-                    message:"OTP expired"
+                    message: "OTP expired"
                 })
             }
 
-            if(otp!=User.forgot_password_otp ){
+            if (otp != User.forgot_password_otp) {
                 return res.status(500).json({
-                    message:"Wrong OTP entered !"
+                    message: "Wrong OTP entered !"
                 })
             }
 
             return res.status(201).json({
-                message:"OTP verified succesfully!"
+                message: "OTP verified succesfully!"
             })
 
 
         }
-        catch(error){
+        catch (error) {
             res.status(402).json({
                 message: `Error : ${error.message}`
             })
         }
     }
 
-    resetPassword=async(req,res)=>{
-        try{
-            const {email,newPassword,confirmPassword}=req.body;
-            if(!email||!newPassword||!confirmPassword){
+    resetPassword = async (req, res) => {
+        try {
+            const { email, newPassword, confirmPassword } = req.body;
+            if (!email || !newPassword || !confirmPassword) {
                 res.status(404).json({
-                    message:"Please fill required details"
+                    message: "Please fill required details"
                 })
             }
-            if(newPassword!=confirmPassword){
+            if (newPassword != confirmPassword) {
                 return res.status(400).json({
-                    message:"New password is not same as confirm password"
+                    message: "New password is not same as confirm password"
                 })
             }
 
-            const User=await UserModel.findOne({email});
+            const User = await UserModel.findOne({ email });
 
-            if(!User){
+            if (!User) {
                 return res.status(404).json({
-                    message:"Wrong Email"
+                    message: "Wrong Email"
                 })
             }
 
             const salt = await bcrypt.genSalt(10);
             const hashPassword = await bcrypt.hash(newPassword, salt);
 
-            const updateUser= await UserModel.findByIdAndUpdate(User._id,{
-                password:hashPassword
+            const updateUser = await UserModel.findByIdAndUpdate(User._id, {
+                password: hashPassword
             })
 
             return res.status(200).json({
-                message:"Password updated"
+                message: "Password updated"
             })
 
 
         }
-        catch(error){
+        catch (error) {
             res.status(402).json({
                 message: `Error reseting Password : ${error.message}`
             })
         }
     }
 
-    refereshToken=async(req,res)=>{
+    refereshToken = async (req, res) => {
         try {
             const refreshToken = req.cookies.refreshToken || req?.headers?.authorization?.split(" ")[1]  /// [ Bearer token]
-    
-            if(!refreshToken){
+
+            if (!refreshToken) {
                 return response.status(401).json({
-                    message : "Invalid token",
-                    error  : true,
-                    success : false
+                    message: "Invalid token",
+                    error: true,
+                    success: false
                 })
             }
-    
-            const verifyToken = await jwt.verify(refreshToken,process.env.SECRET_KEY_REFRESH_TOKEN)
-    
-            if(!verifyToken){
+
+            const verifyToken = await jwt.verify(refreshToken, process.env.SECRET_KEY_REFRESH_TOKEN)
+
+            if (!verifyToken) {
                 return response.status(401).json({
-                    message : "token is expired",
-                    error : true,
-                    success : false
+                    message: "token is expired",
+                    error: true,
+                    success: false
                 })
             }
-    
+
             const userId = verifyToken?._id
-    
+
             const newAccessToken = await generatedAccessToken(userId)
-    
+
             const cookiesOption = {
-                httpOnly : true,
-                secure : true,
-                sameSite : "None"
+                httpOnly: true,
+                secure: true,
+                sameSite: "None"
             }
-    
-            res.cookie('accessToken',newAccessToken,cookiesOption)
-    
+
+            res.cookie('accessToken', newAccessToken, cookiesOption)
+
             return response.json({
-                message : "New Access token generated",
-                error : false,
-                success : true,
-                data : {
-                    accessToken : newAccessToken
+                message: "New Access token generated",
+                error: false,
+                success: true,
+                data: {
+                    accessToken: newAccessToken
                 }
             })
-    
-    
+
+
         } catch (error) {
             return response.status(500).json({
-                message : error.message || error,
-                error : true,
-                success : false
+                message: error.message || error,
+                error: true,
+                success: false
             })
         }
     }
