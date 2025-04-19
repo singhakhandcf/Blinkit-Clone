@@ -20,7 +20,13 @@ export class UserController {
         this.router.post("/register", this.registerUser);
         this.router.post("/verify-email", this.verifyUser);
         this.router.post("/login", this.loginUser);
-        this.router.post("/logout", auth, this.logoutUser)
+        this.router.post("/logout", auth, this.logoutUser);
+        this.router.put("upload-avatar",auth,this.uploadAvatar);
+        this.router.put("updateUser",auth,this.updateUserDetails);
+        this.router.put("forgotPassword",this.forgotPassword);
+        this.router.put("verify-otp",this.verifyOtp);
+        this.router.put("reset=password",this.resetPassword);
+        this.router.post("refresh-Token",this.refereshToken);
     }
     registerUser = async (req, res) => {
         try {
@@ -336,6 +342,59 @@ export class UserController {
         catch(error){
             res.status(402).json({
                 message: `Error reseting Password : ${error.message}`
+            })
+        }
+    }
+
+    refereshToken=async(req,res)=>{
+        try {
+            const refreshToken = req.cookies.refreshToken || req?.headers?.authorization?.split(" ")[1]  /// [ Bearer token]
+    
+            if(!refreshToken){
+                return response.status(401).json({
+                    message : "Invalid token",
+                    error  : true,
+                    success : false
+                })
+            }
+    
+            const verifyToken = await jwt.verify(refreshToken,process.env.SECRET_KEY_REFRESH_TOKEN)
+    
+            if(!verifyToken){
+                return response.status(401).json({
+                    message : "token is expired",
+                    error : true,
+                    success : false
+                })
+            }
+    
+            const userId = verifyToken?._id
+    
+            const newAccessToken = await generatedAccessToken(userId)
+    
+            const cookiesOption = {
+                httpOnly : true,
+                secure : true,
+                sameSite : "None"
+            }
+    
+            res.cookie('accessToken',newAccessToken,cookiesOption)
+    
+            return response.json({
+                message : "New Access token generated",
+                error : false,
+                success : true,
+                data : {
+                    accessToken : newAccessToken
+                }
+            })
+    
+    
+        } catch (error) {
+            return response.status(500).json({
+                message : error.message || error,
+                error : true,
+                success : false
             })
         }
     }
