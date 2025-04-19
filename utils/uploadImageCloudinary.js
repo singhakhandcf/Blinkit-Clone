@@ -7,7 +7,7 @@ cloudinary.config({
 })
 
 const uploadImageCloudinary=async(image)=>{
-    const buffer= Buffer.from(await image.arrayBuffer())
+    const buffer= image?.buffer||Buffer.from(await image.arrayBuffer())
 
     const uploadImage = await new Promise((resolve,reject)=>{
         cloudinary.uploader.upload_stream({folder:"Blinkit"},(error,uploadResult)=>{
