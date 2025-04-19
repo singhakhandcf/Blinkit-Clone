@@ -259,25 +259,86 @@ export class UserController {
         
     }
 
-    // verifyOtp=async(req,res)=>{
-    //     try{
-    //         const {email,otp}=req.body;
+    verifyOtp=async(req,res)=>{
+        try{
+            const {email,otp}=req.body;
 
-    //         if(!email||!otp){
-    //             return res.status(400).json({
-    //                 message:"Please enter otp"
-    //             })
-    //         }
+            if(!email||!otp){
+                return res.status(400).json({
+                    message:"Please enter otp"
+                })
+            }
+
+            const User=await UserModel.findOne({email});
+
+            const curTime=new Date().toISOString();
+
+            if(curTime>expiryTime){
+                return res.status(501).json({
+                    message:"OTP expired"
+                })
+            }
+
+            if(otp!=User.forgot_password_otp ){
+                return res.status(500).json({
+                    message:"Wrong OTP entered !"
+                })
+            }
+
+            return res.status(201).json({
+                message:"OTP verified succesfully!"
+            })
 
 
+        }
+        catch(error){
+            res.status(402).json({
+                message: `Error : ${error.message}`
+            })
+        }
+    }
 
-    //     }
-    //     catch(error){
-    //         res.status(402).json({
-    //             message: `Error : ${error.message}`
-    //         })
-    //     }
-    // }
+    resetPassword=async(req,res)=>{
+        try{
+            const {email,newPassword,confirmPassword}=req.body;
+            if(!email||!newPassword||!confirmPassword){
+                res.status(404).json({
+                    message:"Please fill required details"
+                })
+            }
+            if(newPassword!=confirmPassword){
+                return res.status(400).json({
+                    message:"New password is not same as confirm password"
+                })
+            }
+
+            const User=await UserModel.findOne({email});
+
+            if(!User){
+                return res.status(404).json({
+                    message:"Wrong Email"
+                })
+            }
+
+            const salt = await bcrypt.genSalt(10);
+            const hashPassword = await bcrypt.hash(password, salt);
+
+            const updateUser= await UserModel.findByIdAndUpdate(User._id,{
+                password:hashPassword
+            })
+
+            return res.status(200).json({
+                message:"Password updated"
+            })
+
+
+        }
+        catch(error){
+            res.status(402).json({
+                message: `Error reseting Password : ${error.message}`
+            })
+        }
+    }
 
 }
 
