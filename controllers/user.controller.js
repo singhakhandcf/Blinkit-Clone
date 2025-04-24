@@ -28,6 +28,7 @@ export class UserController {
         this.router.put("/verify-otp", this.verifyOtp);
         this.router.put("/reset-password", this.resetPassword);
         this.router.post("/refresh-Token", this.refereshToken);
+        this.router.get("/user-details",auth,this.userDetails);
     }
     registerUser = async (req, res) => {
         try {
@@ -84,7 +85,11 @@ export class UserController {
                 verify_email: true
             })
 
-            return res.status(201).json({ message: "Verified User" });
+            return res.status(201).json({
+                message: "Verified User" ,
+                success:true,
+                error:false
+            });
 
         }
         catch (error) {
@@ -94,11 +99,11 @@ export class UserController {
 
     loginUser = async (req, res) => {
         try {
-            const { name, email, password } = req.body;
-            if (!name || !email || !password) {
+            const { email, password } = req.body;
+            if ( !email || !password) {
                 return res.status(400).json({ message: "Please fill required fields" });
             }
-            const User = await UserModel.findOne({ name, email });
+            const User = await UserModel.findOne({  email });
             if (!User) {
                 return res.status(404).json({ message: "User Not Found!" });
             }
@@ -132,7 +137,9 @@ export class UserController {
                 data: {
                     accesstoken,
                     refreshToken
-                }
+                },
+                success:true,
+                error:false
             });
         }
         catch (error) {
@@ -159,6 +166,8 @@ export class UserController {
 
             return res.status(202).json({
                 message: "Logout successfully",
+                success:true,
+                error:false
             })
         }
         catch (error) {
@@ -219,7 +228,9 @@ export class UserController {
 
             res.status(200).json({
                 message: "Details updated successfully",
-                data: updateUser
+                data: updateUser,
+                success:true,
+                error:false
             })
 
         }
@@ -250,7 +261,8 @@ export class UserController {
             }
 
             const otp = generateOtp();
-            this.sendOtp(email, otp);
+            console.log(otp,"This is otp");
+            await this.sendOtp(email, otp);
             const expiryTime = new Date() + 60 * 60 * 1000;
 
             const updateUser = await UserModel.findByIdAndUpdate(User._id, {
@@ -259,7 +271,8 @@ export class UserController {
             })
 
             res.status(201).json({
-                success: true,
+                success:true,
+                error:false,
                 message: "OTP sent successfully !"
             })
         }
@@ -310,7 +323,9 @@ export class UserController {
             }
 
             return res.status(201).json({
-                message: "OTP verified succesfully!"
+                message: "OTP verified succesfully!",
+                success:true,
+                error:false
             })
 
 
@@ -352,7 +367,9 @@ export class UserController {
             })
 
             return res.status(200).json({
-                message: "Password updated"
+                message: "Password updated",
+                success:true,
+                error:false
             })
 
 
@@ -413,6 +430,24 @@ export class UserController {
                 message: error.message || error,
                 error: true,
                 success: false
+            })
+        }
+    }
+
+    userDetails=async(req,res)=>{
+        try{
+            const userId=req.userId;
+            const User =await UserModel.findById(userId);
+            res.status(200).json({
+                message:"User found",
+                data:User,
+                success:true,
+                error:false
+            })
+        }
+        catch(error){
+            res.status(501).json({
+                message:`Error fetching users ${error.message}`,
             })
         }
     }
